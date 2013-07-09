@@ -1,0 +1,10 @@
+
+.project
+
+.settings/.jsdtscope
+
+*.container
+
+*.name
+
+lib/config.js

@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Insert title here</title>
+
+
+<script
+	src="//cdnjs.cloudflare.com/ajax/libs/dropbox.js/0.9.2/dropbox.min.js"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+
+<script src="lib/jquery.jstree.js"></script>
+<!-- 
+TODO: Create this file with your own encoded key.  The format should be:
+	var encodedKey = "#######";
+ -->
+<script src="lib/config.js"></script>
+
+<script>
+	client = null;
+
+	function doSomethingCool() {
+
+		console.dir(client.credentials());
+
+		client.readdir("", {}, function(error, contents, dirStat, contentsStat) {
+			console.dir(contents);
+			console.dir(dirStat);
+			console.dir(contentsStat);
+		});
+		$("#signed-in").html("signed in");
+		$("#sign_out").show();
+		$("#sign_in").hide();
+
+		$("#demo1").jstree({
+			/* "json_data" : {
+				"data" : [ {
+					"data" : "A node",
+					"metadata" : {
+						id : 23
+					},
+					"children" : [ "Child 1", "A Child 2" ]
+				}, {
+					"attr" : {
+						"id" : "li.node.id1"
+					},
+					"data" : {
+						"title" : "Long format demo",
+						"attr" : {
+							"href" : "#"
+						}
+					}
+				} ]
+			}, */
+			"plugins" : [ "themes", "json_data", "ui" ]
+		}).bind("select_node.jstree", function(e, data) {
+			alert(data.rslt.obj.data("id"));
+		});
+	}
+
+	$(function() {
+
+		var options = {
+			key : "7gEUKqBKKFA=|PXzIjIAUQejJd0o2o69gZppgVx0mXhyeDBagtxNU+A==",
+			sandbox : true
+		};
+
+		client = new Dropbox.Client(options);
+
+		client.authDriver(new Dropbox.Drivers.Redirect({
+			useQuery : true,
+			rememberUser : true
+		}));
+
+		$("#sign_out").hide();
+		$("#sign_in").hide();
+
+		client.authenticate({
+			interactive : false
+		}, function(error, c) {
+			client = c;
+			if (error) {
+				return handleError(error);
+			}
+
+			if (client.isAuthenticated()) {
+				// Cached credentials are available, make Dropbox API calls.
+				doSomethingCool();
+			} else {
+				// show and set up the "Sign into Dropbox" button
+				$("#sign_out").hide();
+				$("#sign_in").show();
+			}
+		});
+
+		$("#sign_in").click(function() {
+			// The user will have to click an 'Authorize' button.
+			client.authenticate(function(error, client) {
+				if (error) {
+					return handleError(error);
+				}
+				doSomethingCool();
+			});
+		});
+
+		$("#sign_out").click(function() {
+			client.signOut(function(error) {
+				if (!error) {
+					console.log("signed out");
+
+					client = new Dropbox.Client(options);
+
+					client.authDriver(new Dropbox.Drivers.Redirect({
+						useQuery : true,
+						rememberUser : true
+					}));
+
+					$("#sign_out").hide();
+					$("#signed-in").html("not signed in");
+					$("#sign_in").show();
+				} else {
+					console.dir(error);
+				}
+			});
+		});
+	});
+</script>
+
+<style>
+#demo1 {
+	border: 2px solid;
+	position: absolute;
+	top: 120px;
+	bottom: 20px;
+	width: 300px;
+	overflow: scroll;
+}
+</style>
+
+</head>
+<body>
+	<h1>Dropbox Test Page</h1>
+	<input type="button" id="sign_in" value="sign in">
+	<input type="button" id="sign_out" value="sign out">
+	<div id="signed-in"></div>
+	<div id="demo1"></div>
+</body>
+</html>
