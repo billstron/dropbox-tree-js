@@ -15,47 +15,84 @@ TODO: Create this file with your own encoded key.  The format should be:
 	var encodedKey = "#######";
  -->
 <script src="lib/config.js"></script>
+<script src="lib/ajax_load.js"></script>
 
 <script>
 	client = null;
 
+	function getEachInFolder(client, path, callback) {
+		client.readdir(path, function(error, entries, folderStat, childrenStat) {
+			if (error) {
+				return callback(error); // Something went wrong.
+			}
+			console.log(entries)
+			console.log(folderStat);
+			console.log(childrenStat);
+			for ( var j in childrenStat) {
+				console.log(childrenStat[j])
+				var name = childrenStat[j].name;
+				var type = "folder";
+				if (childrenStat[j].isFile) {
+					type = "file";
+				}
+
+				callback(null, name, type, childrenStat[j])
+			}
+		});
+	}
+
+	function getTree(c) {
+		var client = c;
+		return function(node, callback) {
+
+			console.log("the context node");
+			console.log(node);
+			var data = [];
+			client.readdir("/", function(error, entries, folderStat, childrenStat) {
+				if (error) {
+					return callback(error); // Something went wrong.
+				}
+				for ( var j in childrenStat) {
+					var dd = {
+						data : childrenStat[j].name
+					};
+					if (childrenStat[j].isFolder) {
+						dd["state"] = "closed";
+					}
+
+					data.push(dd);
+				}
+				callback(data);
+			});
+		}
+	}
+
 	function doSomethingCool() {
 
-		console.dir(client.credentials());
-
-		client.readdir("", {}, function(error, contents, dirStat, contentsStat) {
-			console.dir(contents);
-			console.dir(dirStat);
-			console.dir(contentsStat);
-		});
 		$("#signed-in").html("signed in");
 		$("#sign_out").show();
 		$("#sign_in").hide();
 
-		$("#demo1").jstree({
-			/* "json_data" : {
-				"data" : [ {
-					"data" : "A node",
-					"metadata" : {
-						id : 23
-					},
-					"children" : [ "Child 1", "A Child 2" ]
-				}, {
-					"attr" : {
-						"id" : "li.node.id1"
-					},
-					"data" : {
-						"title" : "Long format demo",
-						"attr" : {
-							"href" : "#"
-						}
-					}
-				} ]
-			}, */
-			"plugins" : [ "themes", "json_data", "ui" ]
-		}).bind("select_node.jstree", function(e, data) {
-			alert(data.rslt.obj.data("id"));
+		client.getUserInfo(function(error, accountInfo) {
+			if (error) {
+				return showError(error); // Something went wrong.
+			}
+			console.log(accountInfo);
 		});
+
+		$("#demo1").jstree({
+			"ajax_data" : {
+				"data" : getTree(client),
+				"progressive_render" : true,
+				"progressive_unload" : true
+			},
+			"plugins" : [ "themes", "ajax_data", "ui", "crrm" ]
+		}).bind("select_node.jstree", function(e, data) {
+			console.log(data.rslt.obj);
+		}).bind("load_node", function(node, success, error) {
+			console.log("here");
+		});
+
 	}
 
 	$(function() {
