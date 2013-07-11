@@ -20,51 +20,75 @@ TODO: Create this file with your own encoded key.  The format should be:
 <script>
 	client = null;
 
-	function getEachInFolder(client, path, callback) {
-		client.readdir(path, function(error, entries, folderStat, childrenStat) {
-			if (error) {
-				return callback(error); // Something went wrong.
-			}
-			console.log(entries)
-			console.log(folderStat);
-			console.log(childrenStat);
-			for ( var j in childrenStat) {
-				console.log(childrenStat[j])
-				var name = childrenStat[j].name;
-				var type = "folder";
-				if (childrenStat[j].isFile) {
-					type = "file";
-				}
-
-				callback(null, name, type, childrenStat[j])
-			}
-		});
-	}
-
 	function getTree(c) {
 		var client = c;
 		return function(node, callback) {
 
-			console.log("the context node");
-			console.log(node);
+			var path = "/";
+			if ($(node).attr("id")) {
+				path = $(node).attr("id").slice(5);
+			}
+
+			console.log("load path:", path);
+
 			var data = [];
-			client.readdir("/", function(error, entries, folderStat, childrenStat) {
+			client.readdir(path, function(error, entries, folderStat, childrenStat) {
 				if (error) {
 					return callback(error); // Something went wrong.
 				}
 				for ( var j in childrenStat) {
 					var dd = {
-						data : childrenStat[j].name
+						data : {
+							title : childrenStat[j].name,
+							icon : "file"
+						},
+						attr : {
+							id : "node_/" + childrenStat[j].name
+						}
 					};
 					if (childrenStat[j].isFolder) {
 						dd["state"] = "closed";
+						dd.data.icon = "folder";
 					}
-
 					data.push(dd);
 				}
 				callback(data);
 			});
 		}
+	}
+	
+	function doubleClick(timeout, callback){
+		var self = this;
+		this.tLast = (new Date()).getTime();
+		this.timeout = timeout;
+		this.callback = callback;
+		this.nodeLast = null;
+		
+		this.clicked = function clicked(e, data){
+			var tNew = (new Date()).getTime();
+			var node = $(data.rslt.obj).attr("id");
+			var dt = tNew - self.tLast;
+			if(dt <  self.timeout && node == self.nodeLast){
+				this.callback(data);
+			}
+			self.tLast = tNew;
+			self.nodeLast = node;
+		}
+	}
+	
+	var dClick = new doubleClick(300, function(data){
+		console.log("double clicked");
+		var path =  $(data.rslt.obj).attr("id").slice(5);
+		open(path);
+	});
+	
+	function open(path){
+		client.readFile(path, function(error, data){
+			if(error){
+				return console.log("error:", error);
+			}
+			$("#editor-window").html(data);
+		});
 	}
 
 	function doSomethingCool() {
@@ -80,7 +104,7 @@ TODO: Create this file with your own encoded key.  The format should be:
 			console.log(accountInfo);
 		});
 
-		$("#demo1").jstree({
+		$("#tree-window").jstree({
 			"ajax_data" : {
 				"data" : getTree(client),
 				"progressive_render" : true,
@@ -88,12 +112,15 @@ TODO: Create this file with your own encoded key.  The format should be:
 			},
 			"plugins" : [ "themes", "ajax_data", "ui", "crrm" ]
 		}).bind("select_node.jstree", function(e, data) {
-			console.log(data.rslt.obj);
+			dClick.clicked(e, data);
+			console.log("node selected:", $(data.rslt.obj).attr("id"));
 		}).bind("load_node", function(node, success, error) {
 			console.log("here");
 		});
 
 	}
+	
+	
 
 	$(function() {
 
@@ -160,16 +187,51 @@ TODO: Create this file with your own encoded key.  The format should be:
 				}
 			});
 		});
+		
+		$("#file-open").click(function(){
+			var path =  $($("#tree-window").jstree("get_selected")).attr("id").slice(5);
+			open(path);
+		});
+		
+
+		$("#file-new").click(function(){
+			
+		});
+		
+
+		$("#file-copy").click(function(){
+			
+		});
 	});
 </script>
 
 <style>
-#demo1 {
-	border: 2px solid;
+.container {
 	position: absolute;
+	left: 0px;
 	top: 120px;
 	bottom: 20px;
-	width: 300px;
+	width: 905px;
+}
+
+#tree-window {
+	border: 2px solid;
+	position: absolute;
+	left: 0px;
+	top: 30px;
+	bottom:0px;
+	width: 300px;;
+	overflow: scroll;
+}
+
+#editor-window {
+	float: left;
+	border: 2px solid;
+	position: absolute;
+	right: 0px;
+	top: 30px;
+	bottom: 0px;
+	width: 600px;
 	overflow: scroll;
 }
 </style>
@@ -180,6 +242,15 @@ TODO: Create this file with your own encoded key.  The format should be:
 	<input type="button" id="sign_in" value="sign in">
 	<input type="button" id="sign_out" value="sign out">
 	<div id="signed-in"></div>
-	<div id="demo1"></div>
+
+	<div class="container">
+		<input type="button" id="file-open" value="Open File">
+		<input type="button" id="file-new" value="New File">
+		<input type="button" id="file-copy" value="Copy File">
+		
+		<div id="tree-window"></div>
+
+		<div id="editor-window"></div>
+	</div>
 </body>
 </html>
