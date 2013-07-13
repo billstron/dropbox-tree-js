@@ -20,13 +20,36 @@ TODO: Create this file with your own encoded key.  The format should be:
 <script>
 	client = null;
 
+	function getJson(name, path, type) {
+		var childPath = path + "/" + name;
+		var dd = {
+			data : {
+				title : name,
+				icon : type
+			},
+			attr : {
+				id : "node_" + childPath
+			},
+			metadata : {
+				type : type,
+				path : childPath
+			}
+
+		};
+		if (type == "folder") {
+			dd["state"] = "closed";
+		}
+
+		return dd;
+	}
+
 	function getTree(c) {
 		var client = c;
 		return function(node, callback) {
 
-			var path = "/";
-			if ($(node).attr("id")) {
-				path = $(node).attr("id").slice(5);
+			var path = "";
+			if ($(node).data("path")) {
+				path = $(node).data("path");
 			}
 
 			console.log("load path:", path);
@@ -37,58 +60,119 @@ TODO: Create this file with your own encoded key.  The format should be:
 					return callback(error); // Something went wrong.
 				}
 				for ( var j in childrenStat) {
-					var dd = {
-						data : {
-							title : childrenStat[j].name,
-							icon : "file"
-						},
-						attr : {
-							id : "node_/" + childrenStat[j].name
-						}
-					};
-					if (childrenStat[j].isFolder) {
-						dd["state"] = "closed";
-						dd.data.icon = "folder";
-					}
+					var type = (childrenStat[j].isFolder) ? "folder" : "file";
+					var dd = getJson(childrenStat[j].name, path, type)
 					data.push(dd);
 				}
 				callback(data);
 			});
 		}
 	}
-	
-	function doubleClick(timeout, callback){
+
+	function doubleClick(timeout, callback) {
 		var self = this;
 		this.tLast = (new Date()).getTime();
 		this.timeout = timeout;
 		this.callback = callback;
 		this.nodeLast = null;
-		
-		this.clicked = function clicked(e, data){
+
+		this.clicked = function clicked(e, data) {
 			var tNew = (new Date()).getTime();
 			var node = $(data.rslt.obj).attr("id");
 			var dt = tNew - self.tLast;
-			if(dt <  self.timeout && node == self.nodeLast){
+			if (dt < self.timeout && node == self.nodeLast) {
 				this.callback(data);
 			}
 			self.tLast = tNew;
 			self.nodeLast = node;
 		}
 	}
-	
-	var dClick = new doubleClick(300, function(data){
+
+	var dClick = new doubleClick(300, function(data) {
 		console.log("double clicked");
-		var path =  $(data.rslt.obj).attr("id").slice(5);
-		open(path);
+		open(data.rslt.obj);
 	});
-	
-	function open(path){
-		client.readFile(path, function(error, data){
-			if(error){
-				return console.log("error:", error);
+
+	function open(node) {
+		var path = $(node).data("path");
+		switch ($(node).data("type")) {
+		case "folder":
+			$("#tree-window").jstree("open_node", node, function() {
+				console.log("opended node");
+			});
+			break;
+		default:
+		case "file":
+			client.readFile(path, function(error, data) {
+				if (error) {
+					return console.log("error:", error);
+				}
+				$("#editor-window").html(data);
+			});
+			break
+		}
+	}
+
+	function create(name, node) {
+		var path = $(node).data("path");
+		var id = node.attr("id");
+		var type = $(node).data("type");
+		//var name = node.name;
+		path += "/" + name;
+		node.attr("id")
+		switch (type) {
+		case "folder":
+			client.mkdir(path, function(err) {
+				if (err) {
+					return $.jstree.rollback(data.rlbk);
+				}
+				node.attr("id") = node.attr("id") + node.name;
+				console.log("directory just created");
+			})
+			break;
+		default:
+		case "file":
+			client.writeFile(path, "", function(err) {
+				if (err) {
+					return $.jstree.rollback(data.rlbk);
+				}
+				node.attr("id", node.attr("id") + node.name);
+				console.log("file just created");
+			})
+			break
+		}
+		/* $.post("/static/v.1.0pre/_demo/server.php", {
+			"operation" : "create_node",
+			"id" : data.rslt.parent.attr("id").replace("node_", ""),
+			"position" : data.rslt.position,
+			"title" : data.rslt.name,
+			"type" : data.rslt.obj.attr("rel")
+		}, function(r) {
+			if (r.status) {
+				$(data.rslt.obj).attr("id", "node_" + r.id);
+			} else {
+
 			}
-			$("#editor-window").html(data);
-		});
+		}); */
+	}
+
+	function remove(node) {
+		/* data.rslt.obj.each(function() {
+			$.ajax({
+				async : false,
+				type : 'POST',
+				url : "/static/v.1.0pre/_demo/server.php",
+				data : {
+					"operation" : "remove_node",
+					"id" : this.id.replace("node_", "")
+				},
+				success : function(r) {
+					if (!r.status) {
+						data.inst.refresh();
+					}
+				}
+			});
+		}); */
 	}
 
 	function doSomethingCool() {
@@ -113,14 +197,15 @@ TODO: Create this file with your own encoded key.  The format should be:
 			"plugins" : [ "themes", "ajax_data", "ui", "crrm" ]
 		}).bind("select_node.jstree", function(e, data) {
 			dClick.clicked(e, data);
-			console.log("node selected:", $(data.rslt.obj).attr("id"));
+			console.log("node selected:", $(data.rslt.obj).data("path"));
 		}).bind("load_node", function(node, success, error) {
 			console.log("here");
-		});
-
+		}).bind("create.jstree", function(e, data) {
+			create(data.rslt.name, data.rslt.obj);
+		}).bind("remove.jstree", function(e, data) {
+			remove(data.rslt.obj);
+		})
 	}
-	
-	
 
 	$(function() {
 
@@ -187,20 +272,46 @@ TODO: Create this file with your own encoded key.  The format should be:
 				}
 			});
 		});
-		
-		$("#file-open").click(function(){
-			var path =  $($("#tree-window").jstree("get_selected")).attr("id").slice(5);
-			open(path);
-		});
-		
 
-		$("#file-new").click(function(){
-			
+		$("#file-open").click(function() {
+			open($("#tree-window").jstree("get_selected"));
 		});
-		
 
-		$("#file-copy").click(function(){
-			
+		$("#file-new-file").click(function() {
+			var parent = $("#tree-window").jstree("get_selected");
+			if ($(parent).data("type") && $(parent).data("type") == "file") {
+				var node_path = $("#tree-window").jstree("get_path", parent, true);
+				parent = node_path[node_path.length - 2];
+				$("#tree-window").jstree("select_node", "#" + parent);
+			}
+
+			var path = "/";
+			if (parent && $(parent).data("path")) {
+				path = $(parent).data("path");
+			}
+
+			var id = "node_" + path + "/";
+			$("#tree-window").jstree("create", null, "inside", {
+				attr : {
+					id : id
+				},
+				metadata : {
+					path : path,
+					type : "file"
+				}
+			});
+		});
+
+		$("#file-new-folder").click(function(node) {
+			$("#demo").jstree("create", null, "last", {
+				"attr" : {
+					"rel" : this.id.toString().replace("add_", "")
+				}
+			});
+		});
+
+		$("#file-copy").click(function() {
+
 		});
 	});
 </script>
@@ -219,7 +330,7 @@ TODO: Create this file with your own encoded key.  The format should be:
 	position: absolute;
 	left: 0px;
 	top: 30px;
-	bottom:0px;
+	bottom: 0px;
 	width: 300px;;
 	overflow: scroll;
 }
@@ -244,10 +355,11 @@ TODO: Create this file with your own encoded key.  The format should be:
 	<div id="signed-in"></div>
 
 	<div class="container">
-		<input type="button" id="file-open" value="Open File">
-		<input type="button" id="file-new" value="New File">
-		<input type="button" id="file-copy" value="Copy File">
-		
+		<input type="button" id="file-open" value="Open"> <input
+			type="button" id="file-new-file" value="New File"> <input
+			type="button" id="file-new-folder" value="New Folder"> <input
+			type="button" id="file-copy" value="Copy">
+
 		<div id="tree-window"></div>
 
 		<div id="editor-window"></div>
