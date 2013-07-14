@@ -42,30 +42,68 @@ TODO: Create this file with your own encoded key.  The format should be:
 
 		return dd;
 	}
+	
+	function initialLoad(node, callback){
+		var path = "";
+		var data = [];
+		var dd = getJson("Dropbox", path, "folder");
+		dd.metadata.path = "/";
+		dd.children = [];
+		data.push(dd);
+		client.readdir(path, function(error, entries, folderStat, childrenStat) {
+			if (error) {
+				return callback(error); // Something went wrong.
+			}
+			for ( var j in childrenStat) {
+				var type = (childrenStat[j].isFolder) ? "folder" : "file";
+				var dd = getJson(childrenStat[j].name, path, type)
+				data[0].children.push(dd);
+			}
+			callback(data);
+		});
+	}
 
 	function getTree(c) {
 		var client = c;
 		return function(node, callback) {
 
 			var path = "";
-			if ($(node).data("path")) {
+			var data = [];
+			if(!$(node).data("path")){
+				return initialLoad(node, callback);
+			}
+			
+			if ($(node).data("path") != "/Dropbox") {
 				path = $(node).data("path");
+				
+				client.readdir(path, function(error, entries, folderStat, childrenStat) {
+					if (error) {
+						return callback(error); // Something went wrong.
+					}
+					for ( var j in childrenStat) {
+						var type = (childrenStat[j].isFolder) ? "folder" : "file";
+						var dd = getJson(childrenStat[j].name, path, type)
+						data.push(dd);
+					}
+					callback(data);
+				});
+			}else{
+				path = "";
+				client.readdir(path, function(error, entries, folderStat, childrenStat) {
+					if (error) {
+						return callback(error); // Something went wrong.
+					}
+					for ( var j in childrenStat) {
+						var type = (childrenStat[j].isFolder) ? "folder" : "file";
+						var dd = getJson(childrenStat[j].name, path, type)
+						data.push(dd);
+					}
+					callback(data);
+				});
 			}
 
-			console.log("load path:", path);
-
-			var data = [];
-			client.readdir(path, function(error, entries, folderStat, childrenStat) {
-				if (error) {
-					return callback(error); // Something went wrong.
-				}
-				for ( var j in childrenStat) {
-					var type = (childrenStat[j].isFolder) ? "folder" : "file";
-					var dd = getJson(childrenStat[j].name, path, type)
-					data.push(dd);
-				}
-				callback(data);
-			});
+			
+			
 		}
 	}
 
@@ -175,7 +213,7 @@ TODO: Create this file with your own encoded key.  The format should be:
 				type : type
 			}
 		};
-		if(type == "folder"){
+		if (type == "folder") {
 			data.state = "closed";
 		}
 
@@ -221,6 +259,107 @@ TODO: Create this file with your own encoded key.  The format should be:
 		})
 	}
 
+	function modifyCopyName(nameIn, ind) {
+		var name = "";
+		var nameToks = nameIn.split(".");
+		switch (nameIn.indexOf(".")) {
+		case -1:
+			name += nameIn + "_copy";
+			if (ind != null) {
+				name += "_" + ind;
+			}
+			break;
+		case 0:
+			name += ".";
+			var k = 1;
+			if (nameToks.length == 2) {
+				name += nameToks[k] + "_copy";
+				if (ind != null) {
+					name += "_" + ind;
+				}
+			} else {
+				for (k; k < nameToks.length - 2; k++) {
+					name += nameToks[k] + ".";
+				}
+				name += nameToks[k++] + "_copy";
+				if (ind != null) {
+					name += "_" + ind;
+				}
+				name += "." + nameToks[k];
+			}
+			break;
+		default:
+			var k = 0;
+			for (k; k < nameToks.length - 2; k++) {
+				name += nameToks[k] + ".";
+			}
+			name += nameToks[k++] + "_copy";
+			if (ind != null) {
+				name += "_" + ind;
+			}
+			name += "." + nameToks[k];
+			break;
+		}
+		return name;
+	}
+
+	function getChildrenNames(node) {
+		var names = [];
+		var children = $.jstree._reference('tree-window')._get_children(node);
+		for ( var i = 0; i < children.length; i++) {
+			var name = $("#tree-window").jstree("get_text", children[i]);
+			names.push(name);
+		}
+		return names;
+	}
+
+	function onPaste(data) {
+		var parent = data.rslt.obj;
+		var child = data.rslt.nodes;
+		var name = $("#tree-window").jstree("get_text", child);
+		var parentName = $("#tree-window").jstree("get_text", parent);
+
+		var children = getChildrenNames(parent);
+
+		var ind = 0;
+		var nameBad = true;
+		var origName = name;
+		while (nameBad) {
+			nameBad = false;
+			for ( var k in children) {
+				if (children[k] == name) {
+					nameBad = true;
+					break;
+				}
+			}
+			if (nameBad) {
+				if (ind == 0) {
+					name = modifyCopyName(origName);
+				} else {
+					name = modifyCopyName(origName, ind);
+				}
+			}
+			ind++;
+		}
+		$("#tree-window").jstree("rename_node", child, name);
+
+		var newId = parent.attr("id") + "/" + name;
+
+		var path = child.data("path");
+		var newPath = parent.data("path") + "/" + name;
+
+		child.attr("id", newId);
+		child.data("path", newPath);
+		console.log("trying to copy file: ", newPath);
+		client.copy(path, newPath, function(err) {
+			if (err) {
+				writeMessage("Dropbox could not copy.")
+				return $.jstree.rollback(data.rlbk);
+			}
+			console.log("paste successful");
+		})
+	}
+
 	var msgTout = null;
 	function writeMessage(txt) {
 		clearTimeout(msgTout);
@@ -262,9 +401,15 @@ TODO: Create this file with your own encoded key.  The format should be:
 		}).bind("loaded.jstree", function() {
 			writeMessage("Tree loaded");
 		}).bind("move_node.jstree", function(e, data) {
-			copy(data.rslt.name, data.rslt.oc, data);
+			//copy(data.rslt.name, data.rslt.oc, data);
+		}).bind("copy.jstree", function(e, data) {
+			console.log("coppying node:", data.rslt.obj.data("path"));
+		}).bind("paste.jstree", function(e, data) {
+			console.log("pasting node:", data.rslt.obj.data("path"));
+			onPaste(data);
 		});
 	}
+	var copy = null;
 
 	$(function() {
 
@@ -353,8 +498,20 @@ TODO: Create this file with your own encoded key.  The format should be:
 
 		$("#file-copy").click(function() {
 			console.log("copying node");
-			var node = $("#tree-window").jstree("get_selected");
-			$("#tree-window").jstree("move_node", node, null, "after", true, false, true);
+			copy = $("#tree-window").jstree("get_selected");
+			$("#tree-window").jstree("copy");
+		});
+
+		$("#file-paste").click(function() {
+			console.log("pasting node");
+			var parent = $("#tree-window").jstree("get_selected");
+			//var parentType = parent.data("type");
+			var parentPath = parent.data("path");
+			var nodePath = copy.data("path");
+			if (parentPath = nodePath) {
+				parent = $.jstree._reference('tree-window')._get_parent(parent);
+			}
+			$("#tree-window").jstree("paste", parent);
 		});
 	});
 </script>
@@ -408,6 +565,7 @@ TODO: Create this file with your own encoded key.  The format should be:
 			type="button" id="file-new-file" value="New File"> <input
 			type="button" id="file-new-folder" value="New Folder"> <input
 			type="button" id="file-copy" value="Copy"> <input
+			type="button" id="file-paste" value="Paste"><input
 			type="button" id="file-delete" value="Delete">
 
 		<div id="tree-window"></div>
