@@ -113,20 +113,22 @@ TODO: Create this file with your own encoded key.  The format should be:
 		}
 	}
 
-	function create(name, node) {
+	function onCreate(name, node, data) {
 		var path = $(node).data("path");
 		var id = node.attr("id");
 		var type = $(node).data("type");
 		//var name = node.name;
 		path += "/" + name;
+		$(node).data("path", path);
 		node.attr("id")
 		switch (type) {
 		case "folder":
 			client.mkdir(path, function(err) {
 				if (err) {
+					writeMessage("Dropbox could not create folder.")
 					return $.jstree.rollback(data.rlbk);
 				}
-				node.attr("id") = node.attr("id") + node.name;
+				node.attr("id", node.attr("id") + node.name);
 				console.log("directory just created");
 			})
 			break;
@@ -134,45 +136,98 @@ TODO: Create this file with your own encoded key.  The format should be:
 		case "file":
 			client.writeFile(path, "", function(err) {
 				if (err) {
+					writeMessage("Dropbox could not create file.")
 					return $.jstree.rollback(data.rlbk);
 				}
 				node.attr("id", node.attr("id") + node.name);
 				console.log("file just created");
-			})
+			});
 			break
 		}
-		/* $.post("/static/v.1.0pre/_demo/server.php", {
-			"operation" : "create_node",
-			"id" : data.rslt.parent.attr("id").replace("node_", ""),
-			"position" : data.rslt.position,
-			"title" : data.rslt.name,
-			"type" : data.rslt.obj.attr("rel")
-		}, function(r) {
-			if (r.status) {
-				$(data.rslt.obj).attr("id", "node_" + r.id);
-			} else {
-
-			}
-		}); */
 	}
 
-	function remove(node) {
-		/* data.rslt.obj.each(function() {
-			$.ajax({
-				async : false,
-				type : 'POST',
-				url : "/static/v.1.0pre/_demo/server.php",
-				data : {
-					"operation" : "remove_node",
-					"id" : this.id.replace("node_", "")
-				},
-				success : function(r) {
-					if (!r.status) {
-						data.inst.refresh();
-					}
+	function newGeneric(type) {
+		var parent = $("#tree-window").jstree("get_selected");
+
+		var path = "/";
+		var position = "inside";
+		if (parent && $(parent).data("path")) {
+			path = $(parent).data("path");
+		}
+
+		if ($(parent).data("type") && $(parent).data("type") == "file") {
+			position = "after";
+			var pathToks = path.split("/");
+			path = "";
+			for ( var i = 0; i < pathToks.length - 1; i++) {
+				if (pathToks[i] != "") {
+					path += ("/" + pathToks[i]);
 				}
-			});
-		}); */
+			}
+		}
+
+		var data = {
+			attr : {
+				id : id
+			},
+			metadata : {
+				path : path,
+				type : type
+			}
+		};
+		if(type == "folder"){
+			data.state = "closed";
+		}
+
+		var id = "node_" + path + "/";
+		$("#tree-window").jstree("create", parent, position, data);
+	}
+
+	function remove(name, node, data) {
+		var path = node.data("path");
+		console.log("trying to delete file: ", path);
+		client.remove(path, function(err) {
+			if (err) {
+				writeMessage("Dropbox could not remove.")
+				return $.jstree.rollback(data.rlbk);
+			}
+			console.log("file just removed");
+		})
+	}
+
+	function copy(name, node, data) {
+		var path = $("#tree-window").jstree("get_selected").data("path");
+		var pathToks = path.split("/");
+		var name = pathToks[pathToks.length - 1];
+		/* var path = node.data("path"); */
+		var newName = name + " copy";
+		$("#tree-window").jstree("rename_node", node, newName);
+
+		var newPath = "/";
+		for ( var i = 0; i < pathToks.length - 2; i++) {
+			newPath += (pathToks[i] + "/");
+		}
+		newPath += newName;
+
+		$(node).attr("id", "node_" + newPath);
+		$(node).data("path", newPath);
+		console.log("trying to delete file: ", path);
+		client.copy(path, newPath, function(err) {
+			if (err) {
+				writeMessage("Dropbox could not copy.")
+				return $.jstree.rollback(data.rlbk);
+			}
+			console.log("copy successful");
+		})
+	}
+
+	var msgTout = null;
+	function writeMessage(txt) {
+		clearTimeout(msgTout);
+		$("#message-window span").html(txt);
+		msgTout = setTimeout(function() {
+			$("#message-window span").html("");
+		}, 5000);
 	}
 
 	function doSomethingCool() {
@@ -201,13 +256,19 @@ TODO: Create this file with your own encoded key.  The format should be:
 		}).bind("load_node", function(node, success, error) {
 			console.log("here");
 		}).bind("create.jstree", function(e, data) {
-			create(data.rslt.name, data.rslt.obj);
+			onCreate(data.rslt.name, data.rslt.obj, data);
 		}).bind("remove.jstree", function(e, data) {
-			remove(data.rslt.obj);
-		})
+			remove(data.rslt.name, data.rslt.obj, data);
+		}).bind("loaded.jstree", function() {
+			writeMessage("Tree loaded");
+		}).bind("move_node.jstree", function(e, data) {
+			copy(data.rslt.name, data.rslt.oc, data);
+		});
 	}
 
 	$(function() {
+
+		writeMessage("loading");
 
 		var options = {
 			key : "7gEUKqBKKFA=|PXzIjIAUQejJd0o2o69gZppgVx0mXhyeDBagtxNU+A==",
@@ -278,40 +339,22 @@ TODO: Create this file with your own encoded key.  The format should be:
 		});
 
 		$("#file-new-file").click(function() {
-			var parent = $("#tree-window").jstree("get_selected");
-			if ($(parent).data("type") && $(parent).data("type") == "file") {
-				var node_path = $("#tree-window").jstree("get_path", parent, true);
-				parent = node_path[node_path.length - 2];
-				$("#tree-window").jstree("select_node", "#" + parent);
-			}
-
-			var path = "/";
-			if (parent && $(parent).data("path")) {
-				path = $(parent).data("path");
-			}
-
-			var id = "node_" + path + "/";
-			$("#tree-window").jstree("create", null, "inside", {
-				attr : {
-					id : id
-				},
-				metadata : {
-					path : path,
-					type : "file"
-				}
-			});
+			newGeneric("file");
 		});
 
-		$("#file-new-folder").click(function(node) {
-			$("#demo").jstree("create", null, "last", {
-				"attr" : {
-					"rel" : this.id.toString().replace("add_", "")
-				}
-			});
+		$("#file-new-folder").click(function() {
+			newGeneric("folder");
+		});
+
+		$("#file-delete").click(function() {
+			var node = $("#tree-window").jstree("get_selected");
+			$("#tree-window").jstree("remove", node);
 		});
 
 		$("#file-copy").click(function() {
-
+			console.log("copying node");
+			var node = $("#tree-window").jstree("get_selected");
+			$("#tree-window").jstree("move_node", node, null, "after", true, false, true);
 		});
 	});
 </script>
@@ -345,6 +388,12 @@ TODO: Create this file with your own encoded key.  The format should be:
 	width: 600px;
 	overflow: scroll;
 }
+
+#message-window {
+	position: absolute;
+	left: 0px;
+	bottom: 0px;
+}
 </style>
 
 </head>
@@ -358,9 +407,13 @@ TODO: Create this file with your own encoded key.  The format should be:
 		<input type="button" id="file-open" value="Open"> <input
 			type="button" id="file-new-file" value="New File"> <input
 			type="button" id="file-new-folder" value="New Folder"> <input
-			type="button" id="file-copy" value="Copy">
+			type="button" id="file-copy" value="Copy"> <input
+			type="button" id="file-delete" value="Delete">
 
 		<div id="tree-window"></div>
+		<div id="message-window">
+			<span></span>
+		</div>
 
 		<div id="editor-window"></div>
 	</div>
