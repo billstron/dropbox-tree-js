@@ -80,6 +80,7 @@ TODO: Create this file with your own encoded key.  The format should be:
 			});
 		});
 	}
+	
 	$(function() {
 
 		var tree = null;
@@ -88,6 +89,9 @@ TODO: Create this file with your own encoded key.  The format should be:
 				return handleError(error);
 			}
 			tree = dtree.createTree("#tree-window", client);
+			$("#signed-in").html("signed in");
+			$("#sign_out").show();
+			$("#sign_in").hide();
 		});
 
 		$("#file-open").click(function() {
