@@ -94,10 +94,12 @@ TODO: Create this file with your own encoded key.  The format should be:
 			if (error) {
 				return handleError(error);
 			}
-			tree = dtree.createTree("#tree-window", client);
-			$("#signed-in").html("signed in");
-			$("#sign_out").show();
-			$("#sign_in").hide();
+			tree = dtree.createTree("#tree-window", client, function() {
+				$("#signed-in").html("signed in");
+				$("#sign_out").show();
+				$("#sign_in").hide();
+			});
+
 		});
 
 		$("#file-open").click(function() {
