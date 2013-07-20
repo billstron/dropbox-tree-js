@@ -125,6 +125,10 @@ TODO: Create this file with your own encoded key.  The format should be:
 		$("#file-paste").click(function() {
 			tree.filePaste();
 		});
+		
+		$("#file-rename").click(function() {
+			tree.fileRename();
+		});
 	});
 </script>
 
@@ -178,7 +182,8 @@ TODO: Create this file with your own encoded key.  The format should be:
 			type="button" id="file-new-folder" value="New Folder"> <input
 			type="button" id="file-copy" value="Copy"> <input
 			type="button" id="file-paste" value="Paste"><input
-			type="button" id="file-delete" value="Delete">
+			type="button" id="file-delete" value="Delete"><input
+			type="button" id="file-rename" value="Rename">
 
 		<div id="tree-window"></div>
 		<div id="message-window">
