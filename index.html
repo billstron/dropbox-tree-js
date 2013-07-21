@@ -86,7 +86,16 @@ TODO: Create this file with your own encoded key.  The format should be:
 			});
 		});
 	}
-
+	
+	function openHandler(err, path, data) {
+		$("#editor-window").val(data);
+		$("#editing-name").html(path);
+	}
+	
+	function renameHandler(err, oldPath, newPath){
+		
+	}
+	
 	$(function() {
 
 		var tree = null;
@@ -94,40 +103,50 @@ TODO: Create this file with your own encoded key.  The format should be:
 			if (error) {
 				return handleError(error);
 			}
-			tree = dtree.createTree("#tree-window", client, function() {
+			dtree.createTree("#tree-window", client, function(err, t) {
+				tree = t;
 				$("#signed-in").html("signed in");
 				$("#sign_out").show();
 				$("#sign_in").hide();
+				
+				$(tree).on("doubleClick", function(){
+					tree.fileOpen(openHandler);
+				});
+
+				$("#file-open").click(function() {
+					tree.fileOpen(openHandler);
+				});
+
+				$("#file-new-file").click(function() {
+					tree.fileNew("file");
+				});
+
+				$("#file-new-folder").click(function() {
+					tree.fileNew("folder");
+				});
+
+				$("#file-delete").click(function() {
+					tree.fileDelete();
+				});
+
+				$("#file-copy").click(function() {
+					tree.fileCopy();
+				});
+
+				$("#file-paste").click(function() {
+					tree.filePaste();
+				});
+
+				$("#file-rename").click(function() {
+					tree.fileRename(renameHandler);
+				});
+
+				$("#file-save").click(function() {
+					tree.fileSave(path, data, function(err){
+						
+					});
+				});
 			});
-
-		});
-
-		$("#file-open").click(function() {
-			tree.fileOpen();
-		});
-
-		$("#file-new-file").click(function() {
-			tree.fileNew("file");
-		});
-
-		$("#file-new-folder").click(function() {
-			tree.fileNew("folder");
-		});
-
-		$("#file-delete").click(function() {
-			tree.fileDelete();
-		});
-
-		$("#file-copy").click(function() {
-			tree.fileCopy();
-		});
-
-		$("#file-paste").click(function() {
-			tree.filePaste();
-		});
-		
-		$("#file-rename").click(function() {
-			tree.fileRename();
 		});
 	});
 </script>
@@ -162,6 +181,14 @@ TODO: Create this file with your own encoded key.  The format should be:
 	overflow: scroll;
 }
 
+#editing-name {
+	float: left;
+	position: absolute;
+	right: 0px;
+	top: 10px;
+	width: 100px;
+}
+
 #message-window {
 	position: absolute;
 	left: 0px;
@@ -183,14 +210,16 @@ TODO: Create this file with your own encoded key.  The format should be:
 			type="button" id="file-copy" value="Copy"> <input
 			type="button" id="file-paste" value="Paste"><input
 			type="button" id="file-delete" value="Delete"><input
-			type="button" id="file-rename" value="Rename">
+			type="button" id="file-rename" value="Rename"><input
+			type="button" id="file-save" value="Save">
 
 		<div id="tree-window"></div>
 		<div id="message-window">
 			<span></span>
 		</div>
 
-		<div id="editor-window"></div>
+		<div id="editing-name"></div>
+		<textarea id="editor-window"></textarea>
 	</div>
 </body>
 </html>
