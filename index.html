@@ -86,16 +86,16 @@ TODO: Create this file with your own encoded key.  The format should be:
 			});
 		});
 	}
-	
+
 	function openHandler(err, path, data) {
 		$("#editor-window").val(data);
 		$("#editing-name").html(path);
 	}
-	
-	function renameHandler(err, oldPath, newPath){
-		
+
+	function renameHandler(err, oldPath, newPath) {
+
 	}
-	
+
 	$(function() {
 
 		var tree = null;
@@ -108,8 +108,8 @@ TODO: Create this file with your own encoded key.  The format should be:
 				$("#signed-in").html("signed in");
 				$("#sign_out").show();
 				$("#sign_in").hide();
-				
-				$(tree).on("doubleClick", function(){
+
+				$(tree).on("doubleClick", function() {
 					tree.fileOpen(openHandler);
 				});
 
@@ -142,9 +142,18 @@ TODO: Create this file with your own encoded key.  The format should be:
 				});
 
 				$("#file-save").click(function() {
-					tree.fileSave(path, data, function(err){
-						
-					});
+					var path = $("#editing-name").html();
+					var data = $("#editor-window").val();
+					if (path) {
+						tree.fileSave(path, data, function(err) {
+							if (err) {
+								console.log("error on save:", err.toString());
+							} else {
+								console.log("save successful!");
+							}
+						});
+					}
+
 				});
 			});
 		});
