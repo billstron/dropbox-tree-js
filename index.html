@@ -176,7 +176,7 @@ TODO: Create this file with your own encoded key.  The format should be:
 	top: 30px;
 	bottom: 0px;
 	width: 300px;;
-	overflow: scroll;
+	overflow: hidden;
 }
 
 #editor-window {
@@ -186,8 +186,9 @@ TODO: Create this file with your own encoded key.  The format should be:
 	right: 0px;
 	top: 30px;
 	bottom: 0px;
-	width: 600px;
+	width: 593px;
 	overflow: scroll;
+	resize: none;
 }
 
 #editing-name {
@@ -201,7 +202,13 @@ TODO: Create this file with your own encoded key.  The format should be:
 #message-window {
 	position: absolute;
 	left: 0px;
-	bottom: 0px;
+	bottom: 5px;
+	width: 300px;
+}
+
+#message-window img {
+	display: none;
+	float: right;
 }
 </style>
 
@@ -224,7 +231,7 @@ TODO: Create this file with your own encoded key.  The format should be:
 
 		<div id="tree-window"></div>
 		<div id="message-window">
-			<span></span>
+			<span></span> <img src="lib/skin-vista/loading.gif">
 		</div>
 
 		<div id="editing-name"></div>
