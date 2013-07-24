@@ -429,8 +429,10 @@
 		path += ("/" + name);
 
 		writeBusy("Creating new file");
-		parent.reloadChildren(function(node, status) {
-			node.expand(true);
+
+		// the function that makes the file or folder
+		function makeIt(node) {
+
 			node.activate();
 			if (type == "folder") {
 				myself.client.mkdir(path, function(err, stat) {
@@ -455,8 +457,16 @@
 					myself.fileRename();
 				});
 			}
-		});
+		}
 
+		if (!parent.isExpanded()) {
+			parent.reloadChildren(function(node, status) {
+				node.expand(true);
+				makeIt(node);
+			});
+		} else {
+			makeIt(parent);
+		}
 	};
 
 	function createTree(needle, client, callback) {
