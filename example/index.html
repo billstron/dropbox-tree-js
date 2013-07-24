@@ -2,26 +2,26 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Insert title here</title>
+<title>dropbox-tree-js</title>
 
 
 <script
 	src="//cdnjs.cloudflare.com/ajax/libs/dropbox.js/0.9.2/dropbox.min.js"></script>
-<script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
-
-<script src="lib/jquery-ui.custom.min.js" type="text/javascript"></script>
-<script src="lib/jquery.cookie.js" type="text/javascript"></script>
+<script
+	src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script
+	src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
 
 <link href="lib/skin-vista/ui.dynatree.css" rel="stylesheet"
 	type="text/css">
 <script src="lib/jquery.dynatree.js" type="text/javascript"></script>
 
 <!-- 
-TODO: Create this file with your own encoded key.  The format should be:
+TODO: Create ../config.js file with your own encoded key.  The format should be:
 	var encodedKey = "#######";
  -->
-<script src="lib/config.js"></script>
-<script src="lib/dropbox-tree.js"></script>
+<script src="../config.js"></script>
+<script src="../dropbox-tree.js"></script>
 
 <script>
 	function connectDropbox(callback) {
@@ -164,7 +164,7 @@ TODO: Create this file with your own encoded key.  The format should be:
 .container {
 	position: absolute;
 	left: 0px;
-	top: 120px;
+	top: 150px;
 	bottom: 20px;
 	width: 905px;
 }
@@ -214,9 +214,17 @@ TODO: Create this file with your own encoded key.  The format should be:
 
 </head>
 <body>
-	<h1>Dropbox Test Page</h1>
+	<h1>dropbox-tree-js</h1>
+
+	<div>
+		<span>TODO: Create ../config.js file with your own encoded key.
+			The format should be:</span>
+		<code>var encodedKey = "#######";</code>
+	</div>
 	<input type="button" id="sign_in" value="sign in">
 	<input type="button" id="sign_out" value="sign out">
+
+
 	<div id="signed-in"></div>
 
 	<div class="container">

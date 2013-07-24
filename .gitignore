@@ -8,3 +8,5 @@
 *.name
 
 lib/config.js
+
+config.js
