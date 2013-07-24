@@ -5,7 +5,7 @@ A browser only implementation of Dropbox file tree.
 
 
 # New BSD Licsence
-Copyright (c) 2013, William Burke (billstron@gmail.com)
+Copyright (c) 2013, William Burke (billstron)
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
