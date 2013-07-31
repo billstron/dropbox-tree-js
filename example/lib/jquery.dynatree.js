@@ -1,6 +1,21 @@
-/*! jQuery Dynatree Plugin - v1.2.4 - 2013-02-12
-* http://dynatree.googlecode.com/
-* Copyright (c) 2013 Martin Wendt; Licensed MIT, GPL */
+/*************************************************************************
+	jquery.dynatree.js
+	Dynamic tree view control, with support for lazy loading of branches.
+
+	Copyright (c) 2006-2013, Martin Wendt (http://wwWendt.de)
+	Dual licensed under the MIT or GPL Version 2 licenses.
+	http://code.google.com/p/dynatree/wiki/LicenseInfo
+
+	A current version and some documentation is available at
+		http://dynatree.googlecode.com/
+
+	$Version: 1.2.4$
+	$Revision: 644, 2013-02-12 21:39:36$
+
+	@depends: jquery.js
+	@depends: jquery.ui.core.js
+	@depends: jquery.cookie.js
+*************************************************************************/
 
 /* jsHint options*/
 // Note: We currently allow eval() to parse the 'data' attribtes, when initializing from HTML.
@@ -1083,17 +1098,12 @@ DynaTreeNode.prototype = {
 			var opts = this.tree.options;
 			this.tree.logDebug("_loadContent: start - %o", this);
 			this.setLazyNodeStatus(DTNodeStatus_Loading);
-			if( opts.onLazyRead != null ) {
-				// use a callback to know when the funciton is done loading
-				var self = this;
-				opts.onLazyRead.call(this.tree, this, function(err, okay){
-					self.setLazyNodeStatus(DTNodeStatus_Ok);
-					var event = "nodeLoaded.dynatree." + self.tree.$tree.attr("id") + "." + self.data.key;
-					self.tree.$tree.trigger(event, [self, true]);
-					// Otherwise (i.e. if the loading was started as an asynchronous process)
-					// the onLazyRead(dtnode) handler is expected to call dtnode.setLazyNodeStatus(DTNodeStatus_Ok/_Error) when done.
-					self.tree.logDebug("_loadContent: succeeded - %o", self);
-				});
+			if( true === opts.onLazyRead.call(this.tree, this) ) {
+				// If function returns 'true', we assume that the loading is done:
+				this.setLazyNodeStatus(DTNodeStatus_Ok);
+				// Otherwise (i.e. if the loading was started as an asynchronous process)
+				// the onLazyRead(dtnode) handler is expected to call dtnode.setLazyNodeStatus(DTNodeStatus_Ok/_Error) when done.
+				this.tree.logDebug("_loadContent: succeeded - %o", this);
 			}
 		} catch(e) {
 			this.tree.logWarning("_loadContent: failed - %o", e);
@@ -2107,7 +2117,7 @@ var DynaTree = Class.create();
 
 // --- Static members ----------------------------------------------------------
 
-DynaTree.version = "$Version:$";
+DynaTree.version = "$Version: 1.2.4$";
 
 /*
 DynaTree._initTree = function() {
@@ -3073,7 +3083,7 @@ if(versionCompare($.ui.version, "1.8") < 0){
 /*******************************************************************************
  * Tools in ui.dynatree namespace
  */
-$.ui.dynatree.version = "$Version:$";
+$.ui.dynatree.version = "$Version: 1.2.4$";
 
 /**
  * Return a DynaTreeNode object for a given DOM element
@@ -3228,7 +3238,7 @@ $.ui.dynatree.prototype.options = {
 		partsel: "dynatree-partsel",
 		lastsib: "dynatree-lastsib"
 	},
-	debugLevel: 2, // 0:quiet, 1:normal, 2:debug $REPLACE:	debugLevel: 1,
+	debugLevel: 1,
 
 	// ------------------------------------------------------------------------
 	lastentry: undefined

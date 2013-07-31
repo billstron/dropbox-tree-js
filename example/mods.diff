@@ -1,0 +1,51 @@
+--- ./dynatree-1.2.4/src/jquery.dynatree.js	2013-07-30 06:44:01.000000000 -0400
++++ ./lib/jquery.dynatree.js	2013-07-30 06:08:32.000000000 -0400
+@@ -1098,12 +1098,17 @@
+ 			var opts = this.tree.options;
+ 			this.tree.logDebug("_loadContent: start - %o", this);
+ 			this.setLazyNodeStatus(DTNodeStatus_Loading);
+-			if( true === opts.onLazyRead.call(this.tree, this) ) {
+-				// If function returns 'true', we assume that the loading is done:
+-				this.setLazyNodeStatus(DTNodeStatus_Ok);
++			if( opts.onLazyRead != null ) {
++				// use a callback to know when the funciton is done loading
++				var self = this;
++				opts.onLazyRead.call(this.tree, this, function(err, okay){
++					self.setLazyNodeStatus(DTNodeStatus_Ok);
++					var event = "nodeLoaded.dynatree." + self.tree.$tree.attr("id") + "." + self.data.key;
++					self.tree.$tree.trigger(event, [self, true]);
+ 				// Otherwise (i.e. if the loading was started as an asynchronous process)
+ 				// the onLazyRead(dtnode) handler is expected to call dtnode.setLazyNodeStatus(DTNodeStatus_Ok/_Error) when done.
+-				this.tree.logDebug("_loadContent: succeeded - %o", this);
++					self.tree.logDebug("_loadContent: succeeded - %o", self);
++				});
+ 			}
+ 		} catch(e) {
+ 			this.tree.logWarning("_loadContent: failed - %o", e);
+@@ -2117,7 +2122,7 @@
+ 
+ // --- Static members ----------------------------------------------------------
+ 
+-DynaTree.version = "$Version: 1.2.4$";
++DynaTree.version = "$Version:$";
+ 
+ /*
+ DynaTree._initTree = function() {
+@@ -3083,7 +3088,7 @@
+ /*******************************************************************************
+  * Tools in ui.dynatree namespace
+  */
+-$.ui.dynatree.version = "$Version: 1.2.4$";
++$.ui.dynatree.version = "$Version:$";
+ 
+ /**
+  * Return a DynaTreeNode object for a given DOM element
+@@ -3238,7 +3243,7 @@
+ 		partsel: "dynatree-partsel",
+ 		lastsib: "dynatree-lastsib"
+ 	},
+-	debugLevel: 1,
++	debugLevel: 2, // 0:quiet, 1:normal, 2:debug $REPLACE:	debugLevel: 1,
+ 
+ 	// ------------------------------------------------------------------------
+ 	lastentry: undefined

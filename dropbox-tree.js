@@ -125,9 +125,11 @@
 					data.push(dd);
 				}
 				// PWS status OK
-				node.setLazyNodeStatus(DTNodeStatus_Ok);
 				node.addChild(data);
-				callback(null, true);
+				node.setLazyNodeStatus(DTNodeStatus_Ok);
+				
+				var event = "nodeLoaded.dynatree." + node.tree.$tree.attr("id") + "." + node.data.key;
+				node.tree.$tree.trigger(event, [node, true]);
 			});
 		}
 
